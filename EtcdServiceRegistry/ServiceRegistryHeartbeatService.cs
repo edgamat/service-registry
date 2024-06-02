@@ -1,18 +1,31 @@
-﻿using EtcdServiceRegistry;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace EtcdServiceRegistryApp;
+namespace EtcdServiceRegistry;
 
-public class HeartbeatService : BackgroundService
+public class ServiceRegistryHeartbeatService : BackgroundService
 {
     private readonly ServiceRegistry _registry;
-    private readonly ILogger<HeartbeatService> _logger;
+    private readonly ILogger<ServiceRegistryHeartbeatService> _logger;
 
-    public HeartbeatService(ServiceRegistry registry, ILogger<HeartbeatService> logger)
+    public ServiceRegistryHeartbeatService(ServiceRegistry registry, ILogger<ServiceRegistryHeartbeatService> logger)
     {
         _registry = registry;
         _logger = logger;
+    }
+
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        await _registry.RegisterServiceAsync(CancellationToken.None);
+
+        await base.StartAsync(cancellationToken);
+    }
+
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await _registry.UnregisterServiceAsync(cancellationToken);
+        
+        await base.StopAsync(cancellationToken);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
