@@ -29,6 +29,11 @@ public class Worker : BackgroundService
                 _logger.LogInformation("This instance is alive: {InstanceId}", thisInstance.Id);
             }
 
+            if (await _registry.IsLeaderAsync(stoppingToken))
+            {
+                _logger.LogInformation("This instance is the leader: {InstanceId}", thisInstance?.Id);
+            }
+
             await Task.Delay(5_000, stoppingToken);
         }
     }

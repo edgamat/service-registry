@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Serialization;
 using dotnet_etcd.interfaces;
 using Etcdserverpb;
 using Google.Protobuf;
@@ -15,6 +14,7 @@ public class ServiceRegistry
     private readonly string _serviceName;
     private readonly string _serviceInstanceKey;
     private readonly string _serviceAddress;
+    private readonly string _serviceLeaderKey;
     private long _leaseId;
     
     public ServiceRegistry(
@@ -28,7 +28,9 @@ public class ServiceRegistry
         _serviceName = configuration.ServiceName;
         _serviceAddress = configuration.ServiceAddress;
         _serviceInstanceKey = $"/services/{_serviceName}/{_instanceId}";
+        _serviceLeaderKey = $"/leaders/{_serviceName}";
     }
+    
     public async Task RegisterServiceAsync(CancellationToken token)
     {
         // Create a lease that expires after 30 seconds 
@@ -57,6 +59,33 @@ public class ServiceRegistry
         _logger.LogInformation("Successfully registered service {ServiceInstanceInfo} with lease {LeaseId}", serviceInstanceInfo, _leaseId);
     }
 
+    public async Task<bool> IsLeaderAsync(CancellationToken token)
+    {
+        try
+        {
+            var txnRequest = ElectLeaderRequest.Create(_serviceLeaderKey, _instanceId, _leaseId);
+            
+            var txnResponse = await _client.TransactionAsync(txnRequest, null, null, token);
+            if (txnResponse.Succeeded)
+            {
+                _logger.LogInformation("This instance has become the leader {ServiceInstanceKey}", _serviceInstanceKey);
+                return true;
+            }
+
+            var electedLeaderInstanceId = txnResponse.GetElectedLeaderInstanceId();
+
+            _logger.LogDebug("The elected leader is {ElectedLeaderInstanceId}", electedLeaderInstanceId);
+
+            // This instance is the leader if the value matches this instance id
+            return _instanceId.Equals(electedLeaderInstanceId, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to become leader");
+            return false;
+        }
+    }
+
     public async Task SendHeartbeatsAsync(CancellationToken token)
     {
         await _client.LeaseKeepAlive(_leaseId, token).ConfigureAwait(false);
@@ -67,7 +96,13 @@ public class ServiceRegistry
         try
         {
             await _client.DeleteAsync(_serviceInstanceKey, null, null, token).ConfigureAwait(false);
-        
+
+            var revokeRequest = new LeaseRevokeRequest
+            {
+                ID = _leaseId
+            };
+            await _client.LeaseRevokeAsync(revokeRequest, null, null, token).ConfigureAwait(false);
+
             _logger.LogInformation("Successfully un-registered service {ServiceInstanceKey}", _serviceInstanceKey);
 
             return true;
