@@ -14,7 +14,7 @@ public static class ServiceRegistryServiceExtensions
 
         services.AddHostedService<MsSqlServiceRegistryHeartbeatService>();
         services.AddSingleton<IServiceRegistry, MsSqlServiceRegistry>();
-        services.AddSingleton<IDataContext, DataContext>();
+        services.AddSingleton<IDataClient, DataClient>();
 
         return services;
     }

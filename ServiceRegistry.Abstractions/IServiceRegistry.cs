@@ -8,7 +8,7 @@ public interface IServiceRegistry
 
     Task SendHeartbeatsAsync(CancellationToken token);
 
-    Task<ServiceInstance[]> GetRegisteredServicesAsync(CancellationToken token);
+    Task<IList<ServiceInstance>> GetRegisteredServicesAsync(CancellationToken token);
     
     Task UnregisterServiceAsync(CancellationToken token);
 }

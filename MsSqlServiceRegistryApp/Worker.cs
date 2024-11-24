@@ -19,20 +19,19 @@ public class Worker : BackgroundService
         {
             var instances = await _registry.GetRegisteredServicesAsync(stoppingToken);
 
-            _logger.LogInformation("Instances: {InstanceCount}", instances.Length);
+            _logger.LogInformation("Instances: {InstanceCount}", instances.Count);
 
             var thisInstance = instances.FirstOrDefault(x => x.IsThisInstance);
             if (thisInstance != null)
             {
-                var index = Array.FindIndex(instances, item => item.Id == thisInstance.Id);
-                
+                var index = instances.IndexOf(thisInstance);
                 _logger.LogInformation("This instance is alive: {InstanceId}, Index {Index}", thisInstance.Id, index);
             }
 
-            // if (await _registry.IsLeaderAsync(stoppingToken))
-            // {
-            //     _logger.LogInformation("This instance is the leader: {InstanceId}", thisInstance?.Id);
-            // }
+            if (await _registry.IsLeaderAsync(stoppingToken))
+            {
+                _logger.LogInformation("This instance is the leader: {InstanceId}", thisInstance?.Id);
+            }
 
             await Task.Delay(5_000, stoppingToken);
         }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using ServiceRegistry.Abstractions;
 
 namespace MsSqlServiceRegistry;
@@ -6,18 +7,18 @@ namespace MsSqlServiceRegistry;
 public class MsSqlServiceRegistry : IServiceRegistry
 {
     private readonly MsSqlServiceRegistryConfiguration _configuration;
-    private readonly IDataContext _context;
+    private readonly IDataClient _client;
     private readonly ILogger<MsSqlServiceRegistry> _logger;
 
     private readonly string _instanceId;
     private readonly string _serviceName;
     private readonly string _serviceAddress;
-    private Guid _leaseId;
+    private long _leaseId;
     
-    public MsSqlServiceRegistry(MsSqlServiceRegistryConfiguration configuration, IDataContext context, ILogger<MsSqlServiceRegistry> logger)
+    public MsSqlServiceRegistry(MsSqlServiceRegistryConfiguration configuration, IDataClient client, ILogger<MsSqlServiceRegistry> logger)
     {
         _configuration = configuration;
-        _context = context;
+        _client = client;
         _logger = logger;
         
         _instanceId = Guid.NewGuid().ToString();
@@ -28,7 +29,7 @@ public class MsSqlServiceRegistry : IServiceRegistry
     public async Task RegisterServiceAsync(CancellationToken token)
     {
         // Create a lease that expires after 30 seconds
-        _leaseId = await _context.LeaseGrantAsync(token); 
+        _leaseId = await _client.LeaseGrantAsync(token); 
 
         var serviceInstanceInfo = new 
         {
@@ -37,15 +38,34 @@ public class MsSqlServiceRegistry : IServiceRegistry
             Address = AddressResolver.Resolve(_serviceAddress),
         };
 
+        var instanceKey = $"/services/{_serviceName}/{_instanceId}";
+        var instanceValue = JsonSerializer.Serialize(serviceInstanceInfo);
+
         // Register instance
-        await _context.RegisterInstanceAsync(_serviceName, _serviceAddress, _instanceId, _leaseId, token);
+        await _client.AddKeyValueAsync(instanceKey, instanceValue, _leaseId, token);
         
         _logger.LogInformation("Successfully registered service {@ServiceInstanceInfo} with lease {LeaseId}", serviceInstanceInfo, _leaseId);
     }
 
-    public Task<bool> IsLeaderAsync(CancellationToken token)
+    public async Task<bool> IsLeaderAsync(CancellationToken token)
     {
-        throw new NotImplementedException();
+        var isLeader = false;
+
+        try
+        {
+            var instances = await GetRegisteredServicesAsync(token);
+
+            var firstInstance = instances.FirstOrDefault();
+
+            isLeader = _instanceId.Equals(firstInstance?.Id);
+
+        }
+        catch (Exception)
+        {
+            isLeader = false;
+        }
+
+        return isLeader;
     }
 
     public async Task SendHeartbeatsAsync(CancellationToken token)
@@ -54,7 +74,7 @@ public class MsSqlServiceRegistry : IServiceRegistry
         
         while (!token.IsCancellationRequested)
         {
-            await _context.LeaseKeepAliveAsync(_leaseId, token);
+            await _client.LeaseKeepAliveAsync(_leaseId, token);
             
             _logger.LogInformation("Lease {LeaseId} kept alive", _leaseId);
 
@@ -64,13 +84,27 @@ public class MsSqlServiceRegistry : IServiceRegistry
         }
     }
 
-    public async Task<ServiceInstance[]> GetRegisteredServicesAsync(CancellationToken token)
+    public async Task<IList<ServiceInstance>> GetRegisteredServicesAsync(CancellationToken token)
     {
-        return await _context.GetServiceInstancesAsync(_serviceName, _instanceId, token);
+        var response = await _client.GetRangeAsync($"/services/{_serviceName}", token).ConfigureAwait(false);
+
+        var result = new List<ServiceInstance>();
+
+        foreach (var kv in response)
+        {
+            var instance = JsonSerializer.Deserialize<ServiceInstance>(kv.Value);
+            if (instance == null) continue;
+        
+            instance.IsThisInstance = _instanceId == instance.Id;
+
+            result.Add(instance);
+        }
+
+        return result;
     }
 
     public async Task UnregisterServiceAsync(CancellationToken token)
     {
-        await _context.LeaseRevokeAsync(_leaseId, token);
+        await _client.LeaseRevokeAsync(_leaseId, token);
     }
 }
