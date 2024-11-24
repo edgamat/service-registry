@@ -3,9 +3,9 @@ using System.Text.RegularExpressions;
 
 namespace ServiceRegistry.Abstractions;
 
-public static class AddressResolver
+public static partial class AddressResolver
 {
-    private static readonly Regex HostNameExpression = new("{HOSTNAME}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex HostNameExpression = MyRegex();
 
     public static string Resolve(string configurationServiceAddress)
     {
@@ -18,4 +18,7 @@ public static class AddressResolver
 
         return configurationServiceAddress;
     }
+
+    [GeneratedRegex("{HOSTNAME}", RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-US")]
+    private static partial Regex MyRegex();
 }

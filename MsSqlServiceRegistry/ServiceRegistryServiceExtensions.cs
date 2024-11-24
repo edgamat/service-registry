@@ -1,9 +1,13 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+
+using MsSqlServiceRegistry;
+
 using ServiceRegistry.Abstractions;
 
-namespace MsSqlServiceRegistry;
+#pragma warning disable IDE0130 // Namespace does not match folder structure
+namespace Microsoft.Extensions.DependencyInjection;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 public static class ServiceRegistryServiceExtensions
 {
@@ -13,7 +17,7 @@ public static class ServiceRegistryServiceExtensions
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<MsSqlServiceRegistryConfiguration>>().Value);
 
         services.AddHostedService<MsSqlServiceRegistryHeartbeatService>();
-        services.AddSingleton<IServiceRegistry, MsSqlServiceRegistry>();
+        services.AddSingleton<IServiceRegistry, MsSqlServiceRegistry.MsSqlServiceRegistry>();
         services.AddSingleton<IDataClient, DataClient>();
 
         return services;

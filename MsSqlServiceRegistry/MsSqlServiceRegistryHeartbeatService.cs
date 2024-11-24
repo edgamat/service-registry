@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+
 using ServiceRegistry.Abstractions;
 
 namespace MsSqlServiceRegistry;
@@ -25,7 +26,7 @@ public class MsSqlServiceRegistryHeartbeatService : BackgroundService
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         await _registry.UnregisterServiceAsync(cancellationToken);
-        
+
         await base.StopAsync(cancellationToken);
     }
 
@@ -50,7 +51,7 @@ public class MsSqlServiceRegistryHeartbeatService : BackgroundService
         {
             _logger.LogError(ex, "Unhandled exception while sending heartbeats. Un-registering service");
         }
-        
+
         _logger.LogInformation("Heartbeat service stopped");
     }
 }

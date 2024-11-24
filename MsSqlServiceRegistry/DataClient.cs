@@ -1,4 +1,5 @@
 ﻿using System.Data;
+
 using Microsoft.Data.SqlClient;
 
 namespace MsSqlServiceRegistry;
@@ -135,7 +136,7 @@ WHERE KeyValueKey LIKE @InstanceKeyPrefix
 AND (COALESCE(l.[ExpiresAt], getutcdate()) >= getutcdate()) 
 ORDER BY r.CreatedAt
 ";
-        
+
         await using var conn = new SqlConnection(_configuration.ConnectionString);
         await using var cmd = new SqlCommand();
 
@@ -154,7 +155,7 @@ ORDER BY r.CreatedAt
         {
             var createdAt = reader.GetDateTime(3);
             var updatedAt = reader.GetDateTime(4);
-            
+
             var instance = new KeyValue
             {
                 Key = reader.GetString(0),
@@ -164,7 +165,7 @@ ORDER BY r.CreatedAt
                 UpdatedAt = DateTime.SpecifyKind(updatedAt, DateTimeKind.Utc),
                 LeaseId = reader.IsDBNull(5) ? null : reader.GetInt64(5)
             };
-            
+
             instances.Add(instance);
         }
 
