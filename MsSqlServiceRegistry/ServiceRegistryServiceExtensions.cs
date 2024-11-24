@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using ServiceRegistry.Abstractions;
 
 namespace MsSqlServiceRegistry;
 
@@ -12,7 +13,8 @@ public static class ServiceRegistryServiceExtensions
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<MsSqlServiceRegistryConfiguration>>().Value);
 
         services.AddHostedService<MsSqlServiceRegistryHeartbeatService>();
-        services.AddSingleton<MsSqlServiceRegistry>();
+        services.AddSingleton<IServiceRegistry, MsSqlServiceRegistry>();
+        services.AddSingleton<IDataContext, DataContext>();
 
         return services;
     }

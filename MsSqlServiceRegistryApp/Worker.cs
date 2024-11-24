@@ -1,11 +1,13 @@
+using ServiceRegistry.Abstractions;
+
 namespace MsSqlServiceRegistryApp;
 
 public class Worker : BackgroundService
 {
-    private readonly MsSqlServiceRegistry.MsSqlServiceRegistry _registry;
+    private readonly IServiceRegistry _registry;
     private readonly ILogger<Worker> _logger;
 
-    public Worker(MsSqlServiceRegistry.MsSqlServiceRegistry registry, ILogger<Worker> logger)
+    public Worker(IServiceRegistry registry, ILogger<Worker> logger)
     {
         _registry = registry;
         _logger = logger;

@@ -1,14 +1,15 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ServiceRegistry.Abstractions;
 
 namespace MsSqlServiceRegistry;
 
 public class MsSqlServiceRegistryHeartbeatService : BackgroundService
 {
-    private readonly MsSqlServiceRegistry _registry;
+    private readonly IServiceRegistry _registry;
     private readonly ILogger<MsSqlServiceRegistryHeartbeatService> _logger;
 
-    public MsSqlServiceRegistryHeartbeatService(MsSqlServiceRegistry registry, ILogger<MsSqlServiceRegistryHeartbeatService> logger)
+    public MsSqlServiceRegistryHeartbeatService(IServiceRegistry registry, ILogger<MsSqlServiceRegistryHeartbeatService> logger)
     {
         _registry = registry;
         _logger = logger;
